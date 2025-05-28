@@ -3,6 +3,8 @@
 ## Overview
 This To-Do List application is a simple web app that allows users to create, manage, and track their tasks. It features a frontend built with HTML, CSS, and JavaScript, utilizing Bootstrap for styling and responsiveness. The backend is developed using Flask, a Python web framework, to handle RESTful API requests for managing tasks.
 
+![To Do List App](https://github.com/addictedtovibecoding/to-do-list-flask-app/blob/main/ToDoListApp.png?raw=true)
+
 ## File Structure
 The application consists of two primary files:
 1. `index.html` - The frontend HTML and JavaScript code.
