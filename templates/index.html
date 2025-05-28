@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>To-Do List</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            background-color: #e9ecef;
+            font-family: 'Inter', sans-serif;
+            color: #495057;
+            line-height: 1.6;
+        }
+        
+        .container {
+            max-width: 600px;
+            margin: 50px auto;
+            border-radius: 15px;
+            padding: 30px;
+            background-color: #ffffff;
+            box-shadow: 0 5px 25px rgba(0, 0, 0, 0.1);
+            transition: transform 0.3s;
+        }
+
+        .container:hover {
+            transform: translateY(-5px);
+        }
+
+        h1 {
+            margin-bottom: 25px;
+            font-weight: 600;
+            font-size: 2.2rem;
+            color: #007bff;
+            text-align: center;
+        }
+
+        .notification {
+            display: none;
+            margin-bottom: 20px;
+            padding: 10px;
+            border-radius: 5px;
+            background-color: #d4edda;
+            color: #155724;
+        }
+
+        .spinner-border {
+            display: none;
+        }
+
+        .dark-mode {
+            background-color: #1e1e2f;
+            color: white;
+        }
+
+        .input-group {
+            margin-bottom: 20px;
+        }
+
+        .btn-primary {
+            background-color: #007bff;
+            border: none;
+            border-radius: 5px;
+            padding: 10px 20px;
+            transition: background-color 0.3s, transform 0.2s;
+        }
+
+        .btn-primary:hover {
+            background-color: #0056b3;
+            transform: translateY(-1px);
+        }
+
+        .list-group-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px;
+            margin-bottom: 10px;
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            background-color: #f8f9fa;
+            transition: background-color 0.3s, box-shadow 0.3s;
+        }
+
+        .list-group-item:hover {
+            background-color: #e2e6ea;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .badge {
+            margin-left: 10px;
+            padding: 5px 10px;
+            border-radius: 5px;
+        }
+
+        .badge.bg-success {
+            background-color: #28a745;
+        }
+
+        .badge.bg-secondary {
+            background-color: #6c757d;
+        }
+
+        @media (max-width: 576px) {
+            .container {
+                padding: 20px;
+                margin: 20px;
+            }
+
+            h1 {
+                font-size: 1.8rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1 class="text-center">To-Do List</h1>
+        <button class="btn btn-secondary mb-3" id="toggle-dark-mode">Toggle Dark Mode</button>
+        <div id="notification" class="alert alert-success notification" role="alert"></div>
+        
+        <!-- Nav Tabs -->
+        <ul class="nav nav-tabs">
+            <li class="nav-item">
+                <a class="nav-link active" id="pending-tab" href="#pending-tasks" data-bs-toggle="tab">Pending Tasks</a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" id="completed-tab" href="#completed-tasks" data-bs-toggle="tab">Completed Tasks</a>
+            </li>
+        </ul>
+
+        <div class="tab-content mb-3">
+            <div class="tab-pane fade show active" id="pending-tasks">
+                <form id="task-form" class="mb-3">
+                    <div class="input-group">
+                        <input type="text" class="form-control" id="task-input" placeholder="Add a new task" required>
+                        <button class="btn btn-primary" type="submit">Add</button>
+                    </div>
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="sr-only">Loading...</span>
+                    </div>
+                </form>
+                <ul id="task-list" class="list-group"></ul>
+            </div>
+            <div class="tab-pane fade" id="completed-tasks">
+                <ul id="completed-list" class="list-group"></ul>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const taskForm = document.getElementById('task-form');
+        const taskInput = document.getElementById('task-input');
+        const taskList = document.getElementById('task-list');
+        const completedList = document.getElementById('completed-list');
+        const notification = document.getElementById('notification');
+        const spinner = document.querySelector('.spinner-border');
+        const toggleDarkModeBtn = document.getElementById('toggle-dark-mode');
+
+        const fetchTasks = async () => {
+            spinner.style.display = 'inline-block';
+            const response = await fetch('/api/tasks');
+            const data = await response.json();
+            taskList.innerHTML = '';
+            completedList.innerHTML = '';
+            data.forEach(task => {
+                const li = document.createElement('li');
+                li.className = 'list-group-item d-flex justify-content-between align-items-center';
+                if (task.completed) {
+                    li.innerHTML = `
+                        ${task.task} <span class="badge bg-success task-status">Complete</span>
+                        <button class="btn btn-danger btn-sm" onclick="deleteTask(${task.id})">Delete</button>
+                    `;
+                    completedList.appendChild(li);
+                } else {
+                    li.innerHTML = `
+                        <input type="checkbox" onchange="toggleTask(${task.id}, this.checked)">
+                        ${task.task} <span class="badge bg-secondary task-status">Pending</span>
+                        <button class="btn btn-danger btn-sm" onclick="deleteTask(${task.id})">Delete</button>
+                    `;
+                    taskList.appendChild(li);
+                }
+            });
+            spinner.style.display = 'none';
+        };
+
+        taskForm.onsubmit = async (e) => {
+            e.preventDefault();
+            const task = taskInput.value;
+            spinner.style.display = 'inline-block';
+            await fetch('/api/tasks', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ task }),
+            });
+            taskInput.value = '';
+            notification.textContent = 'Task added successfully!';
+            notification.style.display = 'block';
+            setTimeout(() => { notification.style.display = 'none'; }, 3000);
+            fetchTasks();
+        };
+
+        const toggleTask = async (id, completed) => {
+            spinner.style.display = 'inline-block';
+            await fetch(`/api/tasks/${id}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ completed }),
+            });
+            fetchTasks();
+        };
+
+        const deleteTask = async (id) => {
+            if (confirm('Are you sure you want to delete this task?')) {
+                spinner.style.display = 'inline-block';
+                await fetch(`/api/tasks/${id}`, {
+                    method: 'DELETE',
+                });
+                fetchTasks();
+            }
+        };
+
+        // Toggle Dark Mode
+        toggleDarkModeBtn.onclick = () => {
+            document.body.classList.toggle('dark-mode');
+            const isDarkMode = document.body.classList.contains('dark-mode');
+            toggleDarkModeBtn.textContent = isDarkMode ? 'Light Mode' : 'Dark Mode';
+        };
+
+        // Initial load
+        fetchTasks();
+    </script>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
